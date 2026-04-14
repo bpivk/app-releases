@@ -57,68 +57,15 @@ echo [2/3] Fetching current version from app-releases...
 echo [3/3] Publishing exe and version.txt...
 echo.
 
-:: Write a temporary Python helper - handles base64, JSON payloads, and gh API calls
-set "PY_HELPER=%TEMP%\release_pub_%RANDOM%.py"
+:: Decode the embedded Python helper from base64 and write it to a temp file
+set "PY_HELPER=%TEMP%\release_pub.py"
+set "PY_B64=aW1wb3J0IGJhc2U2NCwganNvbiwgc3VicHJvY2Vzcywgc3lzLCBvcywgdGVtcGZpbGUKClJFUE8gICAgID0gc3lzLmFyZ3ZbMV0KRk9MREVSICAgPSBzeXMuYXJndlsyXQpFWEVfRklMRSA9IHN5cy5hcmd2WzNdCkRJU1RfRVhFID0gc3lzLmFyZ3ZbNF0KClZFUl9QQVRIID0gRk9MREVSICsgIi92ZXJzaW9uLnR4dCIKRVhFX1BBVEggPSBGT0xERVIgKyAiLyIgKyBFWEVfRklMRQoKZGVmIGdoX2dldChwYXRoKToKICAgIHIgPSBzdWJwcm9jZXNzLnJ1bihbImdoIiwiYXBpIiwicmVwb3MvIitSRVBPKyIvY29udGVudHMvIitwYXRoXSwKICAgICAgICBjYXB0dXJlX291dHB1dD1UcnVlLCB0ZXh0PVRydWUpCiAgICBpZiByLnJldHVybmNvZGUgIT0gMDogcmV0dXJuIE5vbmUsIE5vbmUKICAgIGQgPSBqc29uLmxvYWRzKHIuc3Rkb3V0KQogICAgY29udGVudCA9IGJhc2U2NC5iNjRkZWNvZGUoZFsiY29udGVudCJdLnJlcGxhY2UoIlxuIiwiIikpLmRlY29kZSgpLnN0cmlwKCkKICAgIHJldHVybiBjb250ZW50LCBkWyJzaGEiXQoKZGVmIGdoX3B1dChwYXRoLCBtc2csIGRhdGEsIHNoYT1Ob25lKToKICAgIHBheWxvYWQgPSB7Im1lc3NhZ2UiOiBtc2csICJjb250ZW50IjogYmFzZTY0LmI2NGVuY29kZShkYXRhKS5kZWNvZGUoKX0KICAgIGlmIHNoYTogcGF5bG9hZFsic2hhIl0gPSBzaGEKICAgIHRtcCA9IHRlbXBmaWxlLk5hbWVkVGVtcG9yYXJ5RmlsZShkZWxldGU9RmFsc2UsIHN1ZmZpeD0iLmpzb24iLCBtb2RlPSJ3IikKICAgIGpzb24uZHVtcChwYXlsb2FkLCB0bXApCiAgICB0bXAuY2xvc2UoKQogICAgciA9IHN1YnByb2Nlc3MucnVuKAogICAgICAgIFsiZ2giLCJhcGkiLCJyZXBvcy8iK1JFUE8rIi9jb250ZW50cy8iK3BhdGgsCiAgICAgICAgICItLW1ldGhvZCIsIlBVVCIsIi0taW5wdXQiLHRtcC5uYW1lLCItLWpxIiwiLmNvbW1pdC5zaGEiXSwKICAgICAgICBjYXB0dXJlX291dHB1dD1UcnVlLCB0ZXh0PVRydWUpCiAgICBvcy51bmxpbmsodG1wLm5hbWUpCiAgICBpZiByLnJldHVybmNvZGUgIT0gMDoKICAgICAgICBzeXMuc3RkZXJyLndyaXRlKCJFUlJPUjogIiArIHIuc3RkZXJyICsgIlxuIikKICAgICAgICBzeXMuZXhpdCgxKQogICAgcmV0dXJuIHIuc3Rkb3V0LnN0cmlwKCkKCiMgR2V0IGN1cnJlbnQgdmVyc2lvbiwgZGVmYXVsdCB0byAxLjAgaWYgc3ViZm9sZGVyIGlzIGJyYW5kIG5ldwpjdXIsIHZlcl9zaGEgPSBnaF9nZXQoVkVSX1BBVEgpCmlmIG5vdCBjdXI6CiAgICBjdXIsIHZlcl9zaGEgPSAiMS4wIiwgTm9uZQogICAgcHJpbnQoIiAgTm8gdmVyc2lvbi50eHQgZm91bmQsIHN0YXJ0aW5nIGF0IDEuMCIpCgojIEluY3JlbWVudCBsYXN0IHNlZ21lbnQ6IDEuMCAtPiAxLjEsIDIuOSAtPiAyLjEwCnBhcnRzID0gY3VyLnNwbGl0KCIuIikKcGFydHNbLTFdID0gc3RyKGludChwYXJ0c1stMV0pICsgMSkKbmV3X3ZlciA9ICIuIi5qb2luKHBhcnRzKQpwcmludCgiICBWZXJzaW9uIDogIiArIGN1ciArICIgIC0+ICAiICsgbmV3X3ZlcikKCiMgUHVzaCBleGUgKHBhc3MgZXhpc3RpbmcgU0hBIGlmIHRoZSBmaWxlIGFscmVhZHkgZXhpc3RzKQpfLCBleGVfc2hhID0gZ2hfZ2V0KEVYRV9QQVRIKQpleGVfZGF0YSA9IG9wZW4oRElTVF9FWEUsICJyYiIpLnJlYWQoKQpzaGExID0gZ2hfcHV0KEVYRV9QQVRILCAiUmVsZWFzZSAiICsgRVhFX0ZJTEUgKyAiIHYiICsgbmV3X3ZlciwgZXhlX2RhdGEsIGV4ZV9zaGEpCnByaW50KCIgIEV4ZSAgICAgOiAiICsgc2hhMSkKCiMgUHVzaCB2ZXJzaW9uLnR4dApzaGEyID0gZ2hfcHV0KFZFUl9QQVRILCAiQnVtcCB2ZXJzaW9uIHRvICIgKyBuZXdfdmVyICsgIiBbIiArIEZPTERFUiArICJdIiwgbmV3X3Zlci5lbmNvZGUoKSwgdmVyX3NoYSkKcHJpbnQoIiAgVmVyc2lvbiA6ICIgKyBzaGEyKQpwcmludCgpCnByaW50KCIgIFB1Ymxpc2hlZCAiICsgRVhFX0ZJTEUgKyAiIHYiICsgbmV3X3ZlciArICIgLT4gIiArIFJFUE8gKyAiLyIgKyBGT0xERVIgKyAiLyIpCg=="
+powershell -NoProfile -Command "[System.IO.File]::WriteAllBytes($env:TEMP + '\release_pub.py', [System.Convert]::FromBase64String('%PY_B64%'))"
 
-(
-echo import base64, json, subprocess, sys, os, tempfile
-echo.
-echo REPO     = sys.argv[1]
-echo FOLDER   = sys.argv[2]
-echo EXE_FILE = sys.argv[3]
-echo DIST_EXE = sys.argv[4]
-echo.
-echo VER_PATH = FOLDER + "/version.txt"
-echo EXE_PATH = FOLDER + "/" + EXE_FILE
-echo.
-echo def gh_get^(path^):
-echo     r = subprocess.run^(["gh","api","repos/"+REPO+"/contents/"+path],
-echo         capture_output=True, text=True^)
-echo     if r.returncode != 0: return None, None
-echo     d = json.loads^(r.stdout^)
-echo     content = base64.b64decode^(d["content"].replace^("\n",""^)^).decode^(^).strip^(^)
-echo     return content, d["sha"]
-echo.
-echo def gh_put^(path, msg, data, sha=None^):
-echo     payload = {"message": msg, "content": base64.b64encode^(data^).decode^(^)}
-echo     if sha: payload["sha"] = sha
-echo     tmp = tempfile.NamedTemporaryFile^(delete=False, suffix=".json", mode="w"^)
-echo     json.dump^(payload, tmp^)
-echo     tmp.close^(^)
-echo     r = subprocess.run^(
-echo         ["gh","api","repos/"+REPO+"/contents/"+path,
-echo          "--method","PUT","--input",tmp.name,"--jq",".commit.sha"],
-echo         capture_output=True, text=True^)
-echo     os.unlink^(tmp.name^)
-echo     if r.returncode != 0:
-echo         sys.stderr.write^("ERROR: " + r.stderr + "\n"^)
-echo         sys.exit^(1^)
-echo     return r.stdout.strip^(^)
-echo.
-echo # Get current version, default to 1.0 if not yet created
-echo cur, ver_sha = gh_get^(VER_PATH^)
-echo if not cur:
-echo     cur, ver_sha = "1.0", None
-echo     print^("  No version.txt found, starting at 1.0"^)
-echo.
-echo # Increment last number: 1.0 -> 1.1 / 2.9 -> 2.10
-echo parts = cur.split^("."^)
-echo parts[-1] = str^(int^(parts[-1]^) + 1^)
-echo new_ver = ".".join^(parts^)
-echo print^("  Version : " + cur + "  ->  " + new_ver^)
-echo.
-echo # Push exe (update SHA if it already exists)
-echo _, exe_sha = gh_get^(EXE_PATH^)
-echo exe_data = open^(DIST_EXE, "rb"^).read^(^)
-echo sha1 = gh_put^(EXE_PATH, "Release " + EXE_FILE + " v" + new_ver, exe_data, exe_sha^)
-echo print^("  Exe     : " + sha1^)
-echo.
-echo # Push version.txt
-echo sha2 = gh_put^(VER_PATH, "Bump version to " + new_ver + " [" + FOLDER + "]", new_ver.encode^(^), ver_sha^)
-echo print^("  version : " + sha2^)
-echo print^(^)
-echo print^("  Published " + EXE_FILE + " v" + new_ver + " -> " + REPO + "/" + FOLDER + "/"^)
-) > "!PY_HELPER!"
+if not exist "!PY_HELPER!" (
+    echo ERROR: Failed to write Python helper to temp folder.
+    pause & exit /b 1
+)
 
 py "!PY_HELPER!" "!RELEASES_REPO!" "!REPO_FOLDER!" "!EXE_FILE!" "!DIST_EXE!"
 set "PY_EXIT=!errorlevel!"
